@@ -1,0 +1,24 @@
+#!/bin/bash
+
+cat > /dev/stderr << WELCOME
+RGHost downloader by AITap, 2009
+Published under GPLv3 or later
+WELCOME
+
+if [ -z "$1" ]
+then
+cat > /dev/stderr << MAN
+Usage: $0 link
+Download file from the specified http://rghost.ru/ link.
+MAN
+exit 1
+fi
+
+for url
+do
+echo -n "$url: " > /dev/stderr
+link=`curl -s $url | grep -m 1 -o '"http://rghost.ru/download/[0-9]*/[a-f0-9]*/[^"]*"' | sed 's/^"//;s/"$//'`
+[ $? -eq "0" ] && echo "$link" > /dev/stderr || exit 1
+link=$(echo $link | sed 's/ .*//')
+wget --trust-server-names $link
+done

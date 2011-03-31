@@ -1,0 +1,39 @@
+#!/bin/bash
+
+if [ "$1" == "-s" ]
+then
+out=/dev/null
+else
+out=/dev/stderr #may be stdout
+fi
+
+
+cat << WELCOME > $out
+OMPLOADER script by AITap, 2009
+Published under GPLv3 or later
+WELCOME
+
+if [ -z "$*" ]
+then
+cat << USAGE > /dev/stderr
+Usage: $0 [-s] <file1> ... [filen]
+Upload files to http://omploader.org
+-s: supress all output exept file URLs
+USAGE
+exit 1
+fi
+
+test "$DEBUG" && set -x
+
+for file
+do
+if [ -r "$file" -o "$file" == "-" ]
+then
+echo -ne '\033[1m' > $out; du -h "${file}" > $out; echo -ne '\033[0m' > $out
+echo -n "Please wait..." > $out
+curl -# \
+-A 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.15) Gecko/2009102815 Ubuntu/9.04 (jaunty) Firefox/3.0.15' \
+-F file1="@${file}" \
+http://ompldr.org/upload 2>$out | grep -o -R -m 1 'http://ompldr.org/v[a-zA-Z0-9]*'
+fi
+done

@@ -1,0 +1,38 @@
+These are some useful scripts:
+
+chroot.sh
+	Usage: chroot.sh <device> [program]
+	Mounts specified device, binds /proc, /sys and /dev in the mountpoint and executes chroot.
+	You can specity $MOUNTOPTIONS to add some mount options, e.g:
+	MOUNTOPTIONS=loop,offset=32256  chroot.sh ./disk.hda /bin/sh
+
+cue2flac
+	Usage: ./cue2flac <source file> [CUE file] [-s]
+	Converts file to FLAC and splits it using CUE sheet.
+
+filebin, omploader, *-uploader
+	Usage: $0 <file> [file] ...
+	Uploads specified files to the specified site.
+
+flac2mp3
+	Usage: flac2mp3 [ -s ] <file1.flac> ... [filen.flac]
+	Encodes selected FLAC files (or directories) to MP3.
+	Use -s to suspend all external programs output.
+	You may also set $LAME variable, for example:
+	LAME=-V0 flac2mp3 somefile.flac
+
+flac2ogg
+	Usage: flac2ogg [ -s ] <file1.flac> ... [filen.flac]
+	Encodes selected FLAC files (or directories) to OGG.
+	Use -s to suspend all external programs output.
+	You may also set $OGGENC variable, for example:
+	OGGENC=-q10 flac2ogg somefile.flac
+
+imagebin
+	Usage: imagebin [-s] <file1> ... [filen]
+	Upload files to imagebin.ca
+	-s: supress all output exept file URLs
+
+*-downloader
+	Usage: $0 <URL> [URL] ...
+	Downloads files from specified file hosting URLs.

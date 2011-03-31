@@ -1,0 +1,19 @@
+#!/bin/bash
+
+cat <<END
+zalil.ru downloader by AITap, 2010
+Published under GPLv3 or later
+END
+
+for link
+do
+	echo -n "$link: "
+	if down=$(wget -q -O- $link  | grep 'var link' | sed -r "s/.*link='(.*)'.*/\1/") && [ "$down" ]
+	then
+		echo "$down"
+		wget --trust-server-names -c "http://zalil.ru/$down"
+	else
+		echo
+		continue
+	fi
+done

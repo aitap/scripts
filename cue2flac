@@ -1,0 +1,147 @@
+#!/bin/bash
+
+cat << WELCOME
+cue2flac by AITap, 2009
+Published under GPLv3 or later
+WELCOME
+
+USAGE="\nUsage: $0 <source file> [CUE file] [-s]\n -s: silent, all external programs output is suspended\n"
+
+function die () {
+    echo -e $1
+    exit 1
+}
+
+function check () {
+    if [ ! $? == 0 ]
+    then
+    die "$1"
+    else
+    [ "$2" ] && echo $2
+    fi
+}
+
+function debug () {
+	[ "$DEBUG" ] || return
+	if [ "$1" = "wait" ]
+	then
+		shift
+		echo ---debug: $@
+		read
+	else
+		echo ---debug: $@
+	fi
+}
+
+[ "$DEBUG" ] && set -x
+[ $# -eq 0 ] && die "$USAGE"
+[ -z "$1" ] && die "Source file not defined!"
+
+if [ -n "$2" ]
+then
+	cue="$2"
+else
+	for guess in "$1.cue" "$(sed -e "s/\.[^.]*$/.cue/g" <<<$1)" # "${1/%@(.???|.????)/.cue}" не работает
+	do
+		if [ -r "$guess" -a "$guess" != "$1" ]
+		then
+			cue="$guess"
+			echo ">> CUE detected: $guess"
+			break
+		fi
+	done
+	[ -z "$cue" ] && echo ">> CUE file not defined, assuming it's embedded"
+fi
+
+debug wait "got cue"
+
+# код для получения cue из файла:
+# ffprobe -show_format | awk 'sub(/^TAG:Cuesheet=/,""){flag++}; /^TAG:/ && flag {exit}; flag{print}'
+# или
+# sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}'
+# спасибо komar с #linux@RusNet
+# исходный вариант: | perl -ne '$flag=1 if s/^TAG:Cuesheet=//; exit if /^TAG:/; print if $flag'
+
+
+for prog in ffmpeg ffprobe cuetag cuebreakpoints shnsplit flac enconv
+do
+echo -n ">> Checking for $prog: "
+which $prog
+check "$prog not found!"
+done
+
+debug "programs found"
+
+if [ "$3" == "-s" ]
+then
+out=/dev/null
+echo ">> Working in silent mode."
+else
+out=/dev/stdout
+fi
+
+
+
+tempfile=$(date +%s.flac)
+
+case "${1}" in
+*.flac)
+	echo ">> File is already encoded, symlinking to ${tempfile}"
+	ln -s "$1" "$tempfile"
+	;;
+*)
+	echo ">> Creating temporary full FLAC file: $tempfile"
+	ffmpeg -i "$1" -acodec flac $tempfile &> $out
+	check ">> FFMPEG failed!"
+	;;
+esac
+
+if [ "$cue" ]
+then
+	echo ">> Recoding CUE for the current locale..."
+	tempcue=$(date +%s.cue)
+	enconv < "$cue" > $tempcue
+else
+	echo ">> Getting CUE from main file..."
+	tempcue=$(date +%s.cue)
+	ffprobe -show_format "$1" | sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | enconv > $tempcue
+fi
+
+debug wait "cue got/recoded"
+
+test -s "$tempcue"
+check ">> Someting went wrong"
+
+echo ">> Splitting full FLAC into tracks..."
+
+cuebreakpoints "$tempcue" | shnsplit -o flac $tempfile &> $out
+
+check ">> Splitting failed!"
+
+echo ">> Removing temporary FLAC: $tempfile"
+
+rm $tempfile &> $out
+
+check ">> Removing failed!"
+
+echo ">> Setting tags for splitted tracks..."
+
+cuetag "$tempcue" split-track*.flac &> $out
+
+check ">> Tag setting failed!"
+
+echo ">> Removing temporary CUE: $tempcue"
+
+rm $tempcue &> $out
+
+echo ">> Renaming split-track*.flac using tags..."
+
+for file in split-track*.flac; do
+title=$(lltag -S $file | grep -i '^ *title' | sed 's/.*=//;s|/||g') || next
+number=$(lltag -S $file | grep -i '^ *number' | sed 's/.*=//;s|/||g') || next
+mv -v $file "$(printf "%02d. %s.flac" "$number" "$title")"
+done &> $out
+
+check ">> Renaming failed!"
+
+echo ">> Everything is done."

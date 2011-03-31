@@ -1,0 +1,46 @@
+#!/bin/bash
+
+cat > /dev/stderr << WELCOME
+RGHost uploader by AITap, 2009
+Published under GPLv3 or later
+WELCOME
+
+if [ -z "$*" ]; then 
+cat > /dev/stderr << MAN
+Usage: $0 /path/to/file
+Upload specified file to the http://rghost.ru/ site.
+MAN
+exit 1
+fi
+
+[ "$DEBUG" ] && set -x
+
+for file
+do
+if [ "$file" != "-" ] && [ -r "$file" ] || [ "$file" = "-" ]; then echo -ne '\033[1m' > /dev/stderr; du --apparent-size -h "$file"; echo -ne '\033[0m' > /dev/stderr; else echo -e '\e[1mUploading from stdin\e[0m' >/dev/stderr; fi
+echo -n "Getting authentification token... " > /dev/stderr
+auth=`curl -s --cookie-jar ~/.rghost.cookies rghost.ru | grep 'upload_form' | cut -d '<' -f 5 | cut -d ' ' -f 4 | cut -d '"' -f 2` || exit 1
+echo -n "getting server... " > /dev/stderr
+server=`curl -s rghost.ru | grep -o 'http://[a-z]*.rghost.ru/files'`
+echo -n "uploading file..." > /dev/stderr
+
+if [ -z "$DEBUG" ]
+then
+curl -# \
+-b ~/.rghost.cookies \
+-F authenticity_token="$auth" \
+-F file="@${file}" \
+-F utf8="&#x2713;" \
+-F commit=1 \
+$server | grep -R 'http://rghost.ru/[0-9]*' -o
+else
+echo
+curl -# \
+-b ~/.rghost.cookies \
+-F authenticity_token="$auth" \
+-F file="@${file}" \
+-F utf8="&#x2713;" \
+-F commit=1 \
+-v $server
+fi
+done
