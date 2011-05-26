@@ -8,10 +8,10 @@ END
 for link
 do
 	echo -n "$link: "
-	if down=$(wget -q -O- $link  | grep 'var link' | sed -r "s/.*link='(.*)'.*/\1/") && [ "$down" ]
+	if down=$(wget -q -O- $link  | grep 'var l1nk' | sed -r "s/.*+'(.*)'.*/\1/") && [ "$down" ]
 	then
 		echo "$down"
-		wget --trust-server-names -c "http://zalil.ru/$down"
+		wget --trust-server-names -c "${link}/${down}"
 	else
 		echo
 		continue
