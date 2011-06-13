@@ -72,7 +72,7 @@ do
 		artist=$(lltag -S "$file" | egrep -i '^ *ARTIST=' | sed 's/.*=//')
 		
 		echo -e '\033[1m>>  Recoding...\033[0m'
-		oggenc $OGGENC -a "$artist" -t "$title" -l "$album" -o "${localfile}.ogg" "${file}" &> $out || die ">>  Recoding ${file} failed!"
+		flac -d -s -o - "${file}" | oggenc $OGGENC -a "$artist" -t "$title" -l "$album" -o "${localfile}.ogg" - &> $out || die ">>  Recoding ${file} failed!"
 	else
 		die ">> ${file} is nether a directory, nor a readable file!"
 	fi
