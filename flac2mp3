@@ -21,7 +21,7 @@ USAGE
 exit 1
 }
 
-[ -z "$*" ] && usage
+[ $# -eq 0 ] && usage
 [ "$DEBUG" ] && set -x
 [ -z "$LAME" ] && LAME=-V2
 
