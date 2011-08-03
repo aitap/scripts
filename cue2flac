@@ -89,6 +89,6 @@ echo ">> Removing temporary CUE: $tempcue"
 rm $tempcue
 
 echo ">> Renaming split-track*.flac using tags..."
-lltag --no-tagging --rename "%n. %t" --rename-slash - split-track*.flac || die ">> Renaming failed!"
+lltag --yes --no-tagging --rename "%n. %t" --rename-slash - split-track*.flac || die ">> Renaming failed!"
 
 echo ">> Everything is done."
