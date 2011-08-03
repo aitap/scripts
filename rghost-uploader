@@ -17,30 +17,32 @@ fi
 
 for file
 do
-if [ "$file" != "-" ] && [ -r "$file" ] || [ "$file" = "-" ]; then echo -ne '\033[1m' > /dev/stderr; du --apparent-size -h "$file"; echo -ne '\033[0m' > /dev/stderr; else echo -e '\e[1mUploading from stdin\e[0m' >/dev/stderr; fi
-echo -n "Getting authentification token... " > /dev/stderr
-auth=`curl -s --cookie-jar ~/.rghost.cookies rghost.ru | grep 'upload_form' | cut -d '<' -f 5 | cut -d ' ' -f 4 | cut -d '"' -f 2` || exit 1
-echo -n "getting server... " > /dev/stderr
-server=`curl -s rghost.ru | grep -o 'http://[a-z]*.rghost.ru/files'`
-echo -n "uploading file..." > /dev/stderr
+if [ "$file" != "-" ] && [ -r "$file" ]; then echo -ne '\033[1m' > /dev/stderr; du --apparent-size -h "$file"; echo -ne '\033[0m' > /dev/stderr; else echo -e '\e[1mUploading from stdin\e[0m' >/dev/stderr; fi
 
-if [ -z "$DEBUG" ]
+echo -n "Getting authentification token... " > /dev/stderr
+auth=`curl -s -b ~/.rghost.cookies -c ~/.rghost.cookies rghost.ru | grep 'upload_form' | cut -d '<' -f 5 | cut -d ' ' -f 4 | cut -d '"' -f 2` || exit 1
+
+echo -n "getting server... " > /dev/stderr
+server=`curl -s rghost.ru | grep -o 'http://[a-z]*.rghost.ru/files'` || exit 1
+
+echo -n "uploading file..." > /dev/stderr
+url=$(cat "$file" | curl -# \
+-c ~/.rghost.cookies -b ~/.rghost.cookies \
+-F authenticity_token="$auth" \
+-F file="@-;filename=${file}" \
+$server | \
+grep -R 'http://rghost.ru/[0-9]*' -o)
+
+if [ -n "$PASSWORD" ] # просто не работает
 then
-curl -# \
--b ~/.rghost.cookies \
--F authenticity_token="$auth" \
--F file="@${file}" \
--F utf8="&#x2713;" \
--F commit=1 \
-$server | grep -R 'http://rghost.ru/[0-9]*' -o
-else
-echo
-curl -# \
--b ~/.rghost.cookies \
--F authenticity_token="$auth" \
--F file="@${file}" \
--F utf8="&#x2713;" \
--F commit=1 \
--v $server
+	echo -n "Setting password..."
+	curl -# \
+	-c ~/.rghost.cookies -b ~/.rghost.cookies \
+	-F authencity_token="$auth" \
+	-F "fileset[password]=$PASSWORD" \
+	$url | less # "404 - страницы не существует", даже если я просто укажу authencity_token
+	echo $auth
 fi
+
+echo "$url"
 done

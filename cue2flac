@@ -72,21 +72,21 @@ case "${1}" in
 	;;
 *)
 	echo ">> Creating temporary full FLAC file: $tempfile"
-	ffmpeg -i "$1" -acodec flac $tempfile &> $out || die ">> FFMPEG failed!"
+	ffmpeg -i "$1" -acodec flac $tempfile || die ">> FFMPEG failed!"
 	;;
 esac
 
 echo ">> Splitting full FLAC into tracks..."
-cuebreakpoints "$tempcue" | shnsplit -o flac $tempfile &> $out || die ">> Splitting failed!"
+cuebreakpoints "$tempcue" | shnsplit -o flac $tempfile || die ">> Splitting failed!"
 
 echo ">> Removing temporary FLAC: $tempfile"
-rm $tempfile &> $out
+rm $tempfile 
 
 echo ">> Setting tags for splitted tracks..."
-cuetag "$tempcue" split-track*.flac &> $out || die ">> Tag setting failed!"
+cuetag "$tempcue" split-track*.flac || die ">> Tag setting failed!"
 
 echo ">> Removing temporary CUE: $tempcue"
-rm $tempcue &> $out
+rm $tempcue
 
 echo ">> Renaming split-track*.flac using tags..."
 lltag --no-tagging --rename "%n. %t" --rename-slash - split-track*.flac || die ">> Renaming failed!"
