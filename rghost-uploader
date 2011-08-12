@@ -26,23 +26,11 @@ echo -n "getting server... " > /dev/stderr
 server=`curl -s rghost.ru | grep -o 'http://[a-z]*.rghost.ru/files'` || exit 1
 
 echo -n "uploading file..." > /dev/stderr
-url=$(cat "$file" | curl -# \
+cat "$file" | curl -# \
 -c ~/.rghost.cookies -b ~/.rghost.cookies \
 -F authenticity_token="$auth" \
 -F file="@-;filename=${file}" \
 $server | \
-grep -R 'http://rghost.ru/[0-9]*' -o)
+grep -R 'http://rghost.ru/[0-9]*' -o
 
-if [ -n "$PASSWORD" ] # просто не работает
-then
-	echo -n "Setting password..."
-	curl -# \
-	-c ~/.rghost.cookies -b ~/.rghost.cookies \
-	-F authencity_token="$auth" \
-	-F "fileset[password]=$PASSWORD" \
-	$url | less # "404 - страницы не существует", даже если я просто укажу authencity_token
-	echo $auth
-fi
-
-echo "$url"
 done
