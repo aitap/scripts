@@ -36,3 +36,6 @@ imagebin
 *-downloader
 	Usage: $0 <URL> [URL] ...
 	Downloads files from specified file hosting URLs.
+
+any2ogg
+	Splits and converts losless music to OGG Vorbis

@@ -1,0 +1,102 @@
+#!/bin/bash
+
+msg() {
+	echo ">> $*"
+}
+
+die() {
+	msg "$*"
+	exit 1
+}
+
+cat <<END >&2
+any2ogg by AITap, 2011
+Published under GPLv3 or later
+END
+
+if [ $# -eq 0 ]
+then
+	cat <<END
+Usage: $0 <file.flac|file.ape|file.wv> [file ...]
+ - splits selected files using CUE sheet (if detected) 
+ - recodes them to OGG Vorbis
+ - recursively self-calls on directory contents
+ - is tag-friendly
+END
+	exit 0
+fi
+
+for p in shntool oggenc ffmpeg cueprint mac
+do
+	which $p &>/dev/null || die "$p not found on your system!"
+done
+
+for file in "$@"
+do
+	msg "Doing: $file"
+	basename=$(basename "$file")
+
+	if [ -d "$file" ]
+	then
+		msg "'$file' is a directory"
+		file=$(readlink -e "$file")
+		mkdir "$basename" || die "mkdir failed"
+		cd "$basename"
+		$0 "$file"/*
+		cd ..
+		continue
+	elif [ -r "$file" ] && echo "$file" | egrep -qi "\.(flac|wv|ape)$"
+	then
+		for guess in "${file}.cue" "$(sed -r 's/\..{2,4}$/.cue/'<<<$file)" # встроенным variable substitution - не вышло
+		do
+			if [ -r "$guess" -a "$guess" != "$file" ]
+			then
+				has_cue=1
+				cue=$(readlink -e "$guess")
+				msg "Detected CUE: $guess"
+				break
+			fi
+		done
+		if [ -z "$cue" ] && ffprobe -show_format "$1" 2>/dev/null | grep -q 'TAG:Cuesheet'
+		then
+			msg "Detected embedded CUE"
+			has_cue=1
+		fi
+	
+		if [ "$has_cue" = 1 ]
+		then
+			file=$(readlink -e "$file")
+			dir=$(cueprint -d "%T" "$cue" | sed 's|/|_|g')
+			[ -z "$dir" ] && dir="$basename"
+			mkdir -v "$dir" && cd "$dir" || die "mkdir failed"
+
+			msg "Getting/re-encoding CUE for the current locale"
+			tcue=$(date +/tmp/%s.cue)
+			if [ -n "$cue" ]
+			then
+				enconv < "$cue" > "$tcue" || die "enconv failed"
+			else
+				ffprobe -show_format "$file" | \
+				sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | \
+				enconv > "$tcue" || \
+				die "Could not get/recode CUE!"
+			fi
+
+			msg "Splitting file"
+			shnsplit -o 'cust ext=ogg oggenc -Q -o %f -' -t "%n. %t" -f "$tcue" "$file" || die "shnsplit failed"
+
+			msg "Tagging files"
+			cuetag "$tcue" *.ogg
+
+			msg "Cleaning up"
+			rm -vf "$tcue"
+
+			continue
+		else
+			ffmpeg -loglevel quiet -i "$file" -aq 5 -acodec libvorbis "$(sed -r 's/\..{2,4}$/.ogg/'<<<${basename})" || die "ffmpeg failed"
+		fi
+	else
+		msg "'$file' doesn't look like a suitable file, skipping"
+		continue
+	fi
+done
