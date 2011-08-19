@@ -8,8 +8,7 @@ WELCOME
 for url
 do
 echo -n "$url"
-down=$(wget -q -O - --save-cookies ~/.yandex-downloader -U 'Mozilla/4.0 (compatible) YB/3.5' "$url" | grep 'rel="yandex_bar"' | sed -r 's|.*href="([^"]+)".*|\1|;s|^/disk/start/|http://|;s|.yandex.ru|.yandex.ru/disk|') || ( echo; continue)
-#wget -q -O - --save-cookies ~/.yandex-downloader -U 'Mozilla/4.0 (compatible) YB/3.5' "$url"; exit 0
+down=$(wget -q -O - --save-cookies ~/.yandex-downloader -U 'Mozilla/4.0 (compatible) YB/3.5' "$url" | sed -nr '/rel="yandex_bar"/{s|.*href="([^"]+)".*|\1|;s|^/disk/start/|http://|;s|.yandex.ru|.yandex.ru/disk|;p;q}') || ( echo; continue)
 echo " $down"
 wget --referer="$url" --trust-server-names --load-cookies ~/.yandex-downloader -U 'Mozilla/4.0 (compatible) YB/3.5' "$down" 
 done
