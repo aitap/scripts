@@ -47,7 +47,7 @@ do
 		continue
 	elif [ -r "$file" ] && echo "$file" | egrep -qi "\.(flac|wv|ape)$"
 	then
-		for guess in "${file}.cue" "$(sed -r 's/\..{2,4}$/.cue/'<<<$file)" # встроенным variable substitution - не вышло
+		for guess in "${file}.cue" "$(sed -r 's/\..{2,4}$/.cue/'<<<"$file")" # встроенным variable substitution - не вышло
 		do
 			if [ -r "$guess" -a "$guess" != "$file" ]
 			then
