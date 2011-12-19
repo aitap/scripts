@@ -23,7 +23,7 @@ exit 1
 
 [ $# -eq 0 ] && usage
 [ "$DEBUG" ] && set -x
-[ -z "$OGGENC" ] && OGGENC=-q5
+[ -z "$OGGENC" ] && OGGENC=-q7
 
 if [ -z "$SUBRUN" ] 
 then

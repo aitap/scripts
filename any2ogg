@@ -83,7 +83,7 @@ do
 			fi
 
 			msg "Splitting file"
-			shnsplit -o 'cust ext=ogg oggenc -Q -o %f -' -t "%n. %t" -f "$tcue" "$file" || die "shnsplit failed"
+			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -t "%n. %t" -f "$tcue" "$file" || die "shnsplit failed"
 
 			msg "Tagging files"
 			cuetag "$tcue" *.ogg
