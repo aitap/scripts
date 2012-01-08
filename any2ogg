@@ -51,45 +51,45 @@ do
 		do
 			if [ -r "$guess" -a "$guess" != "$file" ]
 			then
-				has_cue=1
-				cue=$(readlink -e "$guess")
 				msg "Detected CUE: $guess"
-				break
+				cue=$(date +/tmp/%s.cue)
+				cat "$(readlink -e "$guess")" | \
+				enconv > "$cue" && \
+					break || {
+						msg "Failed to recode $guess"
+						rm -vf "$cue"
+						unset cue
+					}
 			fi
 		done
 		if [ -z "$cue" ] && ffprobe -show_format "$1" 2>/dev/null | grep -q 'TAG:Cuesheet'
 		then
 			msg "Detected embedded CUE"
-			has_cue=1
+			ffprobe -show_format "$file" | \
+			sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | \
+			enconv > "$tcue" || {
+				msg "Failed to recode embedded CUE"
+				rm -vf "$cue"
+				unset cue
+			}
 		fi
 	
-		if [ "$has_cue" = 1 ]
+		if [ -n "$cue" ]
 		then
 			file=$(readlink -e "$file")
-			dir=$(cueprint -d "%T" "$cue" | sed 's|/|_|g')
+			dir=$(awk '($2=="DATE"){Y=$3};($1=="TITLE"){$1="";T=gensub(/^ |["\r]/,"","g")};/TRACK/{printf "%4d - %s",Y,gensub(/\//,"_","g",T);exit}' "$cue")
 			[ -z "$dir" ] && dir="$basename"
 			mkdir -v "$dir" && cd "$dir" || die "mkdir failed"
 
-			msg "Getting/re-encoding CUE for the current locale"
-			tcue=$(date +/tmp/%s.cue)
-			if [ -n "$cue" ]
-			then
-				enconv < "$cue" > "$tcue" || die "enconv failed"
-			else
-				ffprobe -show_format "$file" | \
-				sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | \
-				enconv > "$tcue" || \
-				die "Could not get/recode CUE!"
-			fi
-
 			msg "Splitting file"
-			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -t "%n. %t" -f "$tcue" "$file" || die "shnsplit failed"
+			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
+			rm -vf "00. pregap.ogg"
 
 			msg "Tagging files"
-			cuetag "$tcue" *.ogg
+			cuetag "$cue" *.ogg
 
 			msg "Cleaning up"
-			rm -vf "$tcue"
+			rm -vf "$cue"
 
 			continue
 		else
