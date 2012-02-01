@@ -93,7 +93,7 @@ do
 
 			continue
 		else
-			ffmpeg -loglevel quiet -i "$file" -aq 5 -acodec libvorbis "$(sed -r 's/\..{2,4}$/.ogg/'<<<${basename})" || die "ffmpeg failed"
+			ffmpeg -loglevel warning -i "$file" -aq 5 -acodec libvorbis "$(sed -r 's/\..{2,4}$/.ogg/'<<<${basename})" || die "ffmpeg failed"
 		fi
 	else
 		msg "'$file' doesn't look like a suitable file, skipping"
