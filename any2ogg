@@ -82,7 +82,7 @@ do
 			mkdir -v "$dir" && cd "$dir" || die "mkdir failed"
 
 			msg "Splitting file"
-			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
+			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -m '?_/-:_'  -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
 			rm -vf "00. pregap.ogg"
 
 			msg "Tagging files"
