@@ -26,11 +26,10 @@ echo -n "getting server... " > /dev/stderr
 server=`curl -s rghost.ru | grep -o 'http://[a-z]*.rghost.ru/files'` || exit 1
 
 echo -n "uploading file..." > /dev/stderr
-NAME=${NAME:-${file}}
 cat "$file" | curl -# \
 -c ~/.rghost.cookies -b ~/.rghost.cookies \
 -F authenticity_token="$auth" \
--F file="@-;filename=${NAME}" \
+-F file="@-;filename=${NAME:-${file}}" \
 $server | \
 grep -R 'http://rghost.ru/[0-9]*' -o
 
