@@ -55,11 +55,7 @@ do
 				cue=$(date +/tmp/%s.cue)
 				cat "$(readlink -e "$guess")" | \
 				enconv > "$cue" && \
-					break || {
-						msg "Failed to recode $guess"
-						rm -vf "$cue"
-						unset cue
-					}
+					break || msg "WARNING: failed to recode $guess"
 			fi
 		done
 		if [ -z "$cue" ] && ffprobe -show_format "$1" 2>/dev/null | grep -q 'TAG:Cuesheet'

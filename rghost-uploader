@@ -31,6 +31,6 @@ cat "$file" | curl -# \
 -F authenticity_token="$auth" \
 -F file="@-;filename=${NAME:-${file}}" \
 $server | \
-grep 'http://rghost.ru/private/[0-9]*/[0-9a-f]*' -o
+grep -o -e 'http://rghost.ru/private/[0-9]*/[0-9a-f]*' -e 'http://rghost.ru/[0-9]*'
 
 done
