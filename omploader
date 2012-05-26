@@ -30,7 +30,6 @@ do
 if [ "$file" != "-" -a -r "$file" ]; then echo -ne '\033[1m' > $out; du -h --apparent-size "${file}" > $out; echo -ne '\033[0m' > $out; fi
 echo -n "Please wait..." > $out
 curl -# \
--A 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.15) Gecko/2009102815 Ubuntu/9.04 (jaunty) Firefox/3.0.15' \
 -F file1="@${file}" \
-http://omploader.org/upload 2>$out | grep -o -R -m 1 'http://omploader.org/v[a-zA-Z0-9]*'
+http://ompldr.org/upload 2>$out | grep -o -m 1 'http://ompldr.org/v[a-zA-Z0-9]*'
 done
