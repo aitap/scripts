@@ -17,7 +17,7 @@ fi
 for url
 do
 echo -n "$url: " > /dev/stderr
-link=`curl -s $url | grep -m 1 -o '"http://rghost.ru/download/[0-9]*/[a-f0-9]*/[^"]*"' | sed 's/^"//;s/"$//'`
+link=`curl -s $url | grep -m 1 -o '"http://[0-9a-z.]*/download/[0-9]*/[a-f0-9]*/[^"]*"' | sed 's/^"//;s/"$//'`
 [ $? -eq "0" ] && echo "$link" > /dev/stderr || exit 1
 link=$(echo $link | sed 's/ .*//')
 wget --trust-server-names --restrict-file-names=nocontrol $link
