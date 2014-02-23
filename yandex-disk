@@ -9,8 +9,8 @@ use JSON 'decode_json';
 my $m = WWW::Mechanize::->new(autocheck => 1);
 
 for my $arg (@ARGV) {
-	my $hash = {URI::->new($arg)->query_form}->{hash};
 	$m->get($arg);
+	my $hash = {$m->uri->query_form}->{hash};
 	my $key = $m->post("http://disk.yandex.ru/secret-key.jsx")->decoded_content;
 	my $ans = $m->post("http://disk.yandex.ru/handlers.jsx", {
 		_ckey => $key,
