@@ -26,6 +26,15 @@ for my $fname (@ARGV) {
 			$ans;
 		} || eval { decode ascii => $name, Encode::FB_PERLQQ });
 		print "\t$target\n";
-		($_ = $zip->extractMember($member, $target)) == AZ_OK or die $_;
+		TRY: {
+			($_ = $zip->extractMember($member, $target)) == AZ_OK and last TRY;
+			if ($! == 36) { # file name too long
+				my ($ext) = $target =~ /(\.[^.]+)$/;
+				substr($target,255-length($ext))=$ext;
+				redo;
+			} # other errors here
+			# TODO: IO::Prompt to ask what to do?
+			die $_;
+		}
 	}
 }
