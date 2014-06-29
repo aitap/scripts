@@ -40,7 +40,7 @@ do
 	then
 		msg "'$file' is a directory"
 		file=$(readlink -e "$file")
-		mkdir "$basename" || die "mkdir failed"
+		mkdir -p "$basename" || die "mkdir failed"
 		cd "$basename"
 		$0 "$file"/*
 		cd ..
@@ -73,9 +73,9 @@ do
 		if [ -n "$cue" ]
 		then
 			file=$(readlink -e "$file")
-			dir=$(awk '($2=="DATE"){Y=$3};($1=="TITLE"){$1="";T=gensub(/^ |["\r]/,"","g")};/TRACK/{printf "%4d - %s",Y,gensub(/\//,"_","g",T);exit}' "$cue")
+			dir=$(awk '($2=="DATE"){Y=$3};($1=="TITLE"){$1="";T=gensub(/^ |["\r]/,"","g")};/TRACK/{printf "%4d - %s",Y,gensub(/[\/:]/,"_","g",T);exit}' "$cue")
 			[ -z "$dir" ] && dir="$basename"
-			mkdir -v "$dir" && cd "$dir" || die "mkdir failed"
+			mkdir -pv "$dir" && cd "$dir" || die "mkdir failed"
 
 			msg "Splitting file"
 			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -m '?_/-:_'  -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
