@@ -118,8 +118,6 @@ echo "Save to file $target"
 
 declare -a process
 
-process=("convert" "-verbose")
-
 if [ "$rotate" ]; then
 	process+=("-rotate" "$rotate")
 fi
@@ -149,12 +147,12 @@ if [ "$threshold" ]; then
 	process+=("-threshold" "$threshold")
 fi
 
-echo "Running for each image: ${process[*]} <file> <file>.%d.$format"
+echo "Running for each image: convert -verbose <file> ${process[*]} <file>.%d.$format"
 
 declare -a compressed
 
 for image in "$@"; do
-	"${process[@]}" "$image" "$image.%d.$format"
+	convert -verbose "$image" "${process[@]}" "$image.%d.$format"
 	for part in "$image".*.$format; do
 		# $encoder = ${encoder[0]} = program name
 		"${encoder[@]}" "$part" "$part".$encoder
