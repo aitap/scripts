@@ -85,6 +85,11 @@ fi
 target="$1"
 shift
 
+if [ -e "$target" ]; then
+	echo "'$target' already exists! Will not overwrite it, aborting."
+	exit 1
+fi
+
 if [ ! $manual ]; then
 	greyscale=1
 	cstretch=3x40%
