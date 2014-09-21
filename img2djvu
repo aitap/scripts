@@ -146,7 +146,7 @@ if [ "$quantize" ]; then
 fi
 
 if [ "$threshold" ]; then
-	process+=("-threshold" $threshold)
+	process+=("-threshold" "$threshold")
 fi
 
 echo "Running for each image: ${process[*]} <file> <file>.%d.$format"
