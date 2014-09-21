@@ -12,6 +12,8 @@ Available options (in the order of application) are:
 		split each image into <hpages>x<vpages> pages, leaving
 		overlapping part sized <hpixels>x<vpixels>
 		btw, this option is actually just imagemagick's -crop
+	-u <radius>x<sigma>[+<gain>+<threshold>]
+		apply unsharp mask filter
 	-g
 		make images grey-scale
 	-c <black>x<white>[%]
@@ -37,15 +39,18 @@ USAGE
 	exit $1
 }
 
-declare rotate= split= greyscale= cstretch= quantize= threshold= manual= encoder= target=
+declare rotate= split= unsharp= greyscale= cstretch= quantize= threshold= manual= encoder= target=
 
-while getopts ":r:s:gc:q:m:h" OPT; do
+while getopts ":r:s:u:gc:q:m:h" OPT; do
 	case "$OPT" in
 		r)
 			rotate="$OPTARG"
 			;;
 		s)
 			split="$OPTARG"
+			;;
+		u)
+			unsharp="$OPTARG"
 			;;
 		g)
 			greyscale=1
@@ -89,6 +94,7 @@ fi
 echo "The following transformations will be applied, in order:"
 [ "$rotate" ] && echo "Rotate by $rotate degrees"
 [ "$split" ] && echo "Split by $split geometry"
+[ "$unsharp" ] && echo "Apply unsharp mask with parameters $unsharp"
 [ $greyscale ] && echo "Convert to grayscale"
 [ "$cstretch" ] && echo "Stretch contrast by $cstretch"
 [ "$quantize" ] && echo "Quantize leaving $quantize colors"
@@ -99,11 +105,12 @@ declare format=ppm
 
 if [ "$threshold" ]; then
 	encoder=("cjb2" "-verbose")
+	# cjb2 works with monochrome images
+	format=pbm
 elif [ "$quantize" ]; then
 	encoder=("cpaldjvu" "-verbose" "-colors" "$quantize")
 else
 	encoder=("c44")
-	format=pbm
 fi
 
 echo "Encode using $encoder"
@@ -121,8 +128,12 @@ if [ "$split" ]; then
 	process+=("-crop" "$split")
 fi
 
+if [ "$unsharp" ]; then
+	process+=("-unsharp" "$unsharp")
+fi
+
 if [ $greyscale ]; then
-	process+=("-colorspace" "Grey")
+	process+=("-colorspace" "Gray")
 fi
 
 if [ "$cstretch" ]; then
@@ -138,7 +149,7 @@ if [ "$threshold" ]; then
 	process+=("-threshold" $threshold)
 fi
 
-echo "Running for each image: ${process[@]} <file> <file>.%d.$format"
+echo "Running for each image: ${process[*]} <file> <file>.%d.$format"
 
 declare -a compressed
 
