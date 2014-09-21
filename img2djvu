@@ -1,0 +1,161 @@
+#!/bin/bash
+# vi:ts=4
+set -ue # die on undefined variables and non-zero exit code
+
+usage() {
+	cat <<USAGE
+Usage: $0 [-options] <target.djvu> <image files>
+Available options (in the order of application) are:
+	-r <degrees>
+		rotate images by 90, 180 or 270 degrees
+	-s @<hpages>x<vpages>+<hpixels>+<vpixels>
+		split each image into <hpages>x<vpages> pages, leaving
+		overlapping part sized <hpixels>x<vpixels>
+		btw, this option is actually just imagemagick's -crop
+	-g
+		make images grey-scale
+	-c <black>x<white>[%]
+		stretch contrast of the pages, blacking out at most <black>
+		pixels, whiting out at most <white> pixels; treat numbers as
+		percentiles if there is '%' sign at the end
+	-q <colors>
+		quantize image, leaving only <colors> colors
+		this option implies cpaldjvu compression
+	-m <threshold>
+		make pages monochrome
+		this option implies cjb2 compression
+	-h
+		this help message
+
+If no options are set, applied defaults are: -g -c 3x40% -q 4:
+	- grey-scale the image
+	- stretch the contrast, blacking out <= 3% pixels and
+	  whiting out <= 40% pixels
+	- quantize, leaving 4 colors
+	- compress using cpaldjvu
+USAGE
+	exit $1
+}
+
+declare rotate= split= greyscale= cstretch= quantize= threshold= manual= encoder= target=
+
+while getopts ":r:s:gc:q:m:h" OPT; do
+	case "$OPT" in
+		r)
+			rotate="$OPTARG"
+			;;
+		s)
+			split="$OPTARG"
+			;;
+		g)
+			greyscale=1
+			;;
+		c)
+			cstretch="$OPTARG"
+			;;
+		q)
+			quantize="$OPTARG"
+			;;
+		m)
+			threshold="$OPTARG"
+			;;
+		h)
+			usage 0
+			;;
+		*)
+			echo "Invalid option: $OPT $OPTARG"
+			usage 1
+			;;
+	esac
+	manual=1
+done
+
+shift $((OPTIND-1))
+
+if [ $# -le 1 ]; then
+	echo "Missing target filename or source filename[s]"
+	usage 1
+fi
+
+target="$1"
+shift
+
+if [ ! $manual ]; then
+	greyscale=1
+	cstretch=3x40%
+	quantize=4
+fi
+
+echo "The following transformations will be applied, in order:"
+[ "$rotate" ] && echo "Rotate by $rotate degrees"
+[ "$split" ] && echo "Split by $split geometry"
+[ $greyscale ] && echo "Convert to grayscale"
+[ "$cstretch" ] && echo "Stretch contrast by $cstretch"
+[ "$quantize" ] && echo "Quantize leaving $quantize colors"
+[ "$threshold" ] && echo "Convert to monochrome with threshold $threshold"
+
+declare -a encoder
+declare format=ppm
+
+if [ "$threshold" ]; then
+	encoder=("cjb2" "-verbose")
+elif [ "$quantize" ]; then
+	encoder=("cpaldjvu" "-verbose" "-colors" "$quantize")
+else
+	encoder=("c44")
+	format=pbm
+fi
+
+echo "Encode using $encoder"
+echo "Save to file $target"
+
+declare -a process
+
+process=("convert" "-verbose")
+
+if [ "$rotate" ]; then
+	process+=("-rotate" "$rotate")
+fi
+
+if [ "$split" ]; then
+	process+=("-crop" "$split")
+fi
+
+if [ $greyscale ]; then
+	process+=("-colorspace" "Grey")
+fi
+
+if [ "$cstretch" ]; then
+	process+=("-contrast-stretch" "$cstretch")
+fi
+
+if [ "$quantize" ]; then
+	# disable dithering to help cpaldjvu
+	process+=("+dither" "-colors" "$quantize")
+fi
+
+if [ "$threshold" ]; then
+	process+=("-threshold" $threshold)
+fi
+
+echo "Running for each image: ${process[@]} <file> <file>.%d.$format"
+
+declare -a compressed
+
+for image in "$@"; do
+	"${process[@]}" "$image" "$image.%d.$format"
+	for part in "$image".*.$format; do
+		# $encoder = ${encoder[0]} = program name
+		"${encoder[@]}" "$part" "$part".$encoder
+		rm -v "$part"
+		compressed+=("$part".$encoder)
+	done
+done
+
+echo "Combining temp files into target $target"
+
+djvm -c "$target" "${compressed[@]}"
+
+echo "Removing temp files"
+
+rm -v "${compressed[@]}"
