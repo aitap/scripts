@@ -26,7 +26,7 @@ END
 	exit 0
 fi
 
-for p in shntool oggenc ffmpeg cueprint mac
+for p in shntool oggenc ffmpeg cueprint mac enconv
 do
 	which $p &>/dev/null || die "$p not found on your system!"
 done
@@ -58,12 +58,13 @@ do
 					break || msg "WARNING: failed to recode $guess"
 			fi
 		done
-		if [ -z "$cue" ] && ffprobe -show_format "$1" 2>/dev/null | grep -q 'TAG:Cuesheet'
+		if [ -z "$cue" ] && ffprobe -show_format "$file" 2>/dev/null | grep -q 'TAG:Cuesheet'
 		then
 			msg "Detected embedded CUE"
+			cue=$(date +/tmp/%s.cue)
 			ffprobe -show_format "$file" | \
 			sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | \
-			enconv > "$tcue" || {
+			enconv > "$cue" || {
 				msg "Failed to recode embedded CUE"
 				rm -vf "$cue"
 				unset cue
