@@ -92,7 +92,7 @@ CONNECT: {
 		if ($@ =~ /timeout|retry/) {
 			say "Will try again"
 			redo CONNECT;
-		} else { die $@ }
+		} else { die }
 	};
 	say "All done.";
 }
