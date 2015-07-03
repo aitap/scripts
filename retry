@@ -1,0 +1,5 @@
+#!/bin/sh
+# usage: RETRY_SLEEP=10 retry my_command_which_may_fail_and_sould_be_retried
+while ! "$@"; do
+	sleep ${RETRY_SLEEP:-5}
+done
