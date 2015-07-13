@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+use 5.014;
+use warnings;
+use Bencode qw'bencode bdecode';
+use Digest::SHA 'sha1_hex';
+use URI;
+use autodie;
+
+die "Usage: $0 <file.torrent>\n" unless @ARGV == 1;
+
+open my $read, "<:raw", $ARGV[0];
+my $torrent = bdecode do { local $/; <$read> };
+my $uri = URI::->new("");
+$uri->query_form(
+	xt => "urn:btih:".sha1_hex(bencode $torrent->{info}),
+	dn => $torrent->{info}{name},
+	tr => [ $torrent->{announce}, map { @$_ } @{$torrent->{'announce-list'}} ],
+	xl => $torrent->{info}{length},
+);
+$uri->scheme("magnet");
+say $uri->canonical;
