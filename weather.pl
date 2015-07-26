@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
+use 5.014;
 # HTTP client
 use HTTP::Tiny;
 # XML reader
@@ -14,7 +15,7 @@ use URI::Escape 'uri_unescape';
 use Encode::Locale;
 use utf8;
 
-my $place_id = 27612;
+my $place_id = $ARGV[0] // 27612;
 my $url = "http://informer.gismeteo.ru/xml/${place_id}_1.xml";
 
 my $data = XMLin(HTTP::Tiny::->new->get($url)->{content}) or die "Failed to download or parse $url";
