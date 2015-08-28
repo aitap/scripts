@@ -24,10 +24,11 @@ my $message = $parser->parse_open($file);
 $|++;
 # for each part, get recommended_filename from the head and dump the body into generated file name
 for my $part ($message->parts) {
-	my $name = $part->head->recommended_file_name;
+	my $name = $part->head->recommended_filename or next;
 	print "Saving to $name ";
-	my $body = $part->body->open("r");
+	my $body = $part->open("r");
 	local $/ = \4096;
 	open my $attachment, ">", $name or die $!;
-	((print $attachment $_),(print $_)) while <$attachment>;
+	((print $attachment $_),(print ".")) while <$body>;
+	print "\n";
 }
