@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use MIME::Parser;
+use File::Temp 'tempdir';
+use Getopt::Long;
+use File::Path 'make_path';
+
+# getoptions
+GetOptions(
+	'dir=s' => \my $destdir,
+	'input=s' => \my $file,
+) or die "Usage: $0 -d destdir -i input.msg\n";
+
+# create temp dir / use existing
+make_path($destdir);
+# create parser
+my $parser = MIME::Parser::->new();
+$parser->output_under($destdir);
+
+# parse
+my $message = $parser->parse_open($file);
+
+$|++;
+# for each part, get recommended_filename from the head and dump the body into generated file name
+for my $part ($message->parts) {
+	my $name = $part->head->recommended_file_name;
+	print "Saving to $name ";
+	my $body = $part->body->open("r");
+	local $/ = \4096;
+	open my $attachment, ">", $name or die $!;
+	((print $attachment $_),(print $_)) while <$attachment>;
+}
