@@ -53,7 +53,7 @@ CONNECT: {
 			};
 		say "Selected folder $dir";
 		if (!@ids and $connect_was_success<4) { # need to search for them
-			@ids = defined $id ? ($id) : $imap->search($search);
+			@ids = $imap->search($search);
 			die "Search $search returned empty list, nothing to do\n"
 				if !@ids;
 			say "Will download message[s]: @ids";
@@ -90,9 +90,9 @@ CONNECT: {
 		1;
 	} or do {
 		if ($@ =~ /timeout|retry/) {
-			say "Will try again"
+			say "Will try again";
 			redo CONNECT;
-		} else { die $@ }
+		} else { die }
 	};
 	say "All done.";
 }
