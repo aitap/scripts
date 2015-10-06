@@ -88,7 +88,6 @@ if [ ${#lowcolor[@]} -ne ${#highcolor[@]} ]; then
 fi
 
 declare -a tempfiles=()
-declare -a hprocess=(convert -verbose)
 
 for ((i=0; i<${#lowcolor[@]}; i++)); do # c-style for loop to use two arrays simultaneously
 	# here comes the magic from http://djvu-soft.narod.ru/scan/back_glue.htm
@@ -113,6 +112,7 @@ for ((i=0; i<${#lowcolor[@]}; i++)); do # c-style for loop to use two arrays sim
 		convert -verbose +dither -colors "$quantize" "${lowcolor[$i]}" "${lowcolor[$i]}.ppm"
 		cpaldjvu -verbose -dpi "$dpi" -colors "$quantize" "${lowcolor[$i]}.ppm" "${lowcolor[$i]}.cpal"
 		rm "${lowcolor[$i]}.ppm"
+		# leave out the BG44 from cpal file; we'll replace it with the high-color part
 		djvuextract "${lowcolor[$i]}.cpal" FGbz="${lowcolor[$i]}.fgbz" Sjbz="${lowcolor[$i]}.sjbz"
 		rm "${lowcolor[$i]}.cpal"
 		djvumake "${lowcolor[$i]}.djv" INFO=,,"$dpi" Sjbz="${lowcolor[$i]}.sjbz" BG44="${highcolor[$i]}.c44raw" FGbz="${lowcolor[$i]}.fgbz"
