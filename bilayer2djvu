@@ -1,0 +1,133 @@
+#!/bin/bash
+set -ue # die on undefined variables / non-zero exit code
+
+usage() {
+	cat <<END
+Usage: $0 [-options ...] <low-color files mask> <high-color files mask> <output file.djvu>
+Options:
+	-d dpi
+		DPI passed to encoders
+		[default 600]
+	-q <colors>
+		Quantizes low-color images to <colors> colors and encodes using cpaldjvu
+	-t <threshold>
+		Reduce low-color images to bilevel with specified threshold and encode with cjb2
+		[default is to encode using cjb2 with 50% threshold]
+	-r <factor>
+		Resize high-color files to 1/<factor> by both dimensions before encoding, reducing
+		their dpi accordingly (use -r "" to disable). <factor> must be integer in [1..12].
+		[default 3]
+	-c <color>
+		Sets the color of the monochrome text. Accepts HTML color names and RRGGBB form.
+		[default "black"]
+	-h
+		This help message
+END
+	exit $1
+}
+
+declare dpi=600 quantize= resize=3 threshold=50% mono=black
+
+test_int() {
+	if ! test "$1" -eq "$1"; then
+		echo "$2 $1 should be integer, aborting"
+		exit 1
+	fi
+	return 0
+}
+
+while getopts ":d:q:r:t:c:h" OPT; do
+	case "$OPT" in
+		d)
+			dpi="$OPTARG"
+			test_int "$dpi" "DPI"
+			;;
+		q)
+			quantize="$OPTARG"
+			test_int "$quantize" "Number of colors"
+			echo 'Warning: discarding existing BG44 from cpaldjvu output' >&2
+			;;
+		t)
+			threshold="$OPTARG"
+			;;
+		r)
+			resize="$OPTARG"
+			test_int "$resize" "Resize factor"
+			if (( resize < 1 || resize > 12 )); then
+				echo "Resize factor $resize should be in [1..12] range, aborting"
+				exit 1
+			fi
+			;;
+		c)
+			mono="$OPTARG"
+			;;
+		h)
+			usage 0
+			;;
+		*)
+			echo "Invalid option: $OPT $OPTARG"
+			usage 1
+			;;
+	esac
+done
+shift $(($OPTIND-1)) # cut the parameters
+[ $# -eq 3 ] || usage 1;
+
+if [ -e "$3" ]; then
+	echo "$3 already exists, aborting"
+	exit 1
+fi
+
+# this should unwrap the masks
+declare -a lowcolor=($1) highcolor=($2)
+
+if [ ${#lowcolor[@]} -ne ${#highcolor[@]} ]; then
+	echo "Amounts of low-color and high color images do not match!"
+	echo "Don't know what to do, aborting"
+	exit 1
+fi
+
+declare -a tempfiles=()
+declare -a hprocess=(convert -verbose)
+
+for ((i=0; i<${#lowcolor[@]}; i++)); do # c-style for loop to use two arrays simultaneously
+	# here comes the magic from http://djvu-soft.narod.ru/scan/back_glue.htm
+	# first, the BG44 layer from the high-color image (to be used as FG44)
+	declare hdpi=
+	if [ "$resize" ]; then
+		# got the correct formula from github.com/ashipunov/img2djvu. Thank you!
+		newsize="$(identify -format "%[fx:ceil(w/$resize)]x%[fx:ceil(h/$resize)]!" "${highcolor[$i]}")"
+		convert -verbose -resize "$newsize" "${highcolor[$i]}" "${highcolor[$i]}.ppm"
+		hdpi="$((dpi/resize))"
+	else
+		convert -verbose "${highcolor[$i]}" "${highcolor[$i]}.ppm"
+		hdpi="$dpi"
+	fi
+	c44 -dpi "$hdpi" "${highcolor[$i]}.ppm" "${highcolor[$i]}.c44"
+	rm "${highcolor[$i]}.ppm"
+	djvuextract "${highcolor[$i]}.c44" BG44="${highcolor[$i]}.c44raw"
+	rm "${highcolor[$i]}.c44"
+	# second, the low-color part
+	if [ "$quantize" ]; then
+		# dithering is compressed worse by cpaldjvu, looks badly with zooming and makes no sense in the context
+		convert -verbose +dither -colors "$quantize" "${lowcolor[$i]}" "${lowcolor[$i]}.ppm"
+		cpaldjvu -verbose -dpi "$dpi" -colors "$quantize" "${lowcolor[$i]}.ppm" "${lowcolor[$i]}.cpal"
+		rm "${lowcolor[$i]}.ppm"
+		djvuextract "${lowcolor[$i]}.cpal" FGbz="${lowcolor[$i]}.fgbz" Sjbz="${lowcolor[$i]}.sjbz"
+		rm "${lowcolor[$i]}.cpal"
+		djvumake "${lowcolor[$i]}.djv" INFO=,,"$dpi" Sjbz="${lowcolor[$i]}.sjbz" BG44="${highcolor[$i]}.c44raw" FGbz="${lowcolor[$i]}.fgbz"
+		rm "${lowcolor[$i]}.fgbz" "${lowcolor[$i]}.sjbz"
+	else
+		convert -verbose -threshold $threshold "${lowcolor[$i]}" "${lowcolor[$i]}.pbm"
+		cjb2 -verbose -dpi "$dpi" "${lowcolor[$i]}.pbm" "${lowcolor[$i]}.cjb"
+		rm "${lowcolor[$i]}.pbm"
+		djvuextract "${lowcolor[$i]}.cjb" Sjbz="${lowcolor[$i]}.cjbraw"
+		rm "${lowcolor[$i]}.cjb"
+		djvumake "${lowcolor[$i]}.djv" INFO=,,"$dpi" Sjbz="${lowcolor[$i]}.cjbraw" BG44="${highcolor[$i]}.c44raw" "FGbz=#$mono"
+		rm "${lowcolor[$i]}.cjbraw"
+	fi
+	rm "${highcolor[$i]}.c44raw" 
+	tempfiles+=("${lowcolor[$i]}.djv")
+done
+djvm -c "$3" "${tempfiles[@]}"
+rm "${tempfiles[@]}"
