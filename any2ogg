@@ -88,6 +88,7 @@ do
 			msg "Cleaning up"
 			rm -vf "$cue"
 
+			cd ..
 			continue
 		else
 			ffmpeg -loglevel warning -i "$file" -vn -aq 5 -acodec libvorbis "$(sed -r 's/\..{2,4}$/.ogg/'<<<${basename})" || die "ffmpeg failed"
