@@ -34,22 +34,15 @@ my @wind = (qw(N NE E SE S SW W NW));
 
 print "Прогноз для: ", decode(cp1251 => uri_unescape($data->{REPORT}{TOWN}{sname})), ", широта $data->{REPORT}{TOWN}{latitude}, долгота $data->{REPORT}{TOWN}{longitude}\n";
 for my $forecast (@{$data->{REPORT}{TOWN}{FORECAST}}) {
-	printf "%04d-%02d-%02d:%02d", $forecast->{year}, $forecast->{month}, $forecast->{day}, $forecast->{hour};
-	
-	for (qw(cloudiness precipitation)) {
-		print(" $phenomena{$_}{$forecast->{PHENOMENA}{$_}}" // "неправильный код прогноза");
-	}
-	print " $phenomena{rpower}{$forecast->{PHENOMENA}{rpower}}" unless $forecast->{PHENOMENA}{precipitation} == 10;
-	print " $phenomena{spower}{$forecast->{PHENOMENA}{spower}}" if $forecast->{PHENOMENA}{precipitation} == 8;
-	
-	printf " %03d..%03d мм.рт.ст.", $forecast->{PRESSURE}{min}, $forecast->{PRESSURE}{max};
-	printf ' %+02d..%+02d°C '."\N{RIGHTWARDS DOUBLE ARROW}".' %+02d..%+02d°C',
-		$forecast->{TEMPERATURE}{min}, $forecast->{TEMPERATURE}{max},
-		$forecast->{HEAT}{min}, $forecast->{HEAT}{max};
-	
-	print " $wind[$forecast->{WIND}{direction}] $forecast->{WIND}{min}..$forecast->{WIND}{max} м/с";
-	
-	print " $forecast->{RELWET}{min}..$forecast->{RELWET}{max}%";
-
-	print "\n";
+	printf '%04d-%02d-%02d:%02d %1s %1s %-2s%-2s %03d..%03d мм.рт.ст. %+3d..%+3d'."\N{RIGHTWARDS DOUBLE ARROW}".'%+3d..%+3d°C %-2s %-2d..%-2d м/с %-2d..%-2d%%'."\n",
+		$forecast->{year}, $forecast->{month}, $forecast->{day}, $forecast->{hour}, # Y-m-d
+		(map { "$phenomena{$_}{$forecast->{PHENOMENA}{$_}}" // "0" } (qw(cloudiness precipitation))), # one character both
+		($forecast->{PHENOMENA}{precipitation} != 10 ? $phenomena{rpower}{$forecast->{PHENOMENA}{rpower}} : ""), # precipitation power, unless no precipitation
+		($forecast->{PHENOMENA}{precipitation} == 8 ?  $phenomena{spower}{$forecast->{PHENOMENA}{spower}} : ""), # storm power; two characters but rare
+		$forecast->{PRESSURE}{min}, $forecast->{PRESSURE}{max}, # %03d..%03d
+		$forecast->{TEMPERATURE}{min}, $forecast->{TEMPERATURE}{max}, # temperature, %+02d x2
+		$forecast->{HEAT}{min}, $forecast->{HEAT}{max},               # temp. as percieved, %+02d x2
+		$wind[$forecast->{WIND}{direction}], $forecast->{WIND}{min}, $forecast->{WIND}{max}, # %-2s, %-2d..%-2d
+		$forecast->{RELWET}{min}, $forecast->{RELWET}{max},
+	;
 }
