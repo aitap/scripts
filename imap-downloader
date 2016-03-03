@@ -6,6 +6,7 @@ use Net::IMAP::Simple;
 use Getopt::Long qw(:config no_ignore_case);
 
 my ($delta, $port, $dir, $prefix, $timeout) = (200_000, 993, "INBOX", "mail-", 30);
+my @ids;
 GetOptions(
 	"delta=s" => \$delta,
 	"Port=i" => \$port,
