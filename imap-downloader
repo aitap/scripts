@@ -16,7 +16,7 @@ GetOptions(
 	"password=s" => \my $password,
 	"server=s" => \my $server,
 	"Search=s" => \my $search,
-	"id=i" => \my @ids,
+	"id=i" => sub {push @ids, {id => $_[1]}},
 ) or die "Usage: $0 [-d delta] [-p Port] -l login -p password -s server [ -S search | -i id [-i id ...]] -o output_prefix [-f folder] [-t timeout]\n";
 die "-s <server> -l <login> -p <password> is required\n" unless $server && $login && $password;
 die "Nether -i <id> nor -S <search> specified, aborting\n" unless $search || @ids;
