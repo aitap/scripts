@@ -56,7 +56,7 @@ while [ $# -gt 0 ]; do
 				;;
 			s)
 				split="$OPTARG"
-				[ $csplit ] && echo "Will split by $split pieces"
+				[ $split ] && echo "Will split by $split pieces"
 				;;
 			u)
 				unsharp="$OPTARG"
