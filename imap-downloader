@@ -74,6 +74,8 @@ CONNECT: {
 				$|=1;
 				seek $fh, $offset, 0;
 				alarm $timeout;
+				# FIXME: this requires patched IMAP library with different ->get() behaviour
+				# and it's still TODO after a lot of time
 				my $part = scalar $imap->get( $id, "BODY[]<$offset.$delta>" );
 				alarm 0;
 				print ".";
