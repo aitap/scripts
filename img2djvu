@@ -22,6 +22,8 @@ Available options (in the order of application) are:
 		stretch contrast of the pages, blacking out at most <black>
 		pixels, whiting out at most <white> pixels; treat numbers as
 		percentiles if there is '%' sign at the end
+	-a <other options>
+		applies the specified IM options to the image
 	-q <colors>
 		quantize image, leaving only <colors> colors
 		this option implies cpaldjvu compression
@@ -37,7 +39,7 @@ USAGE
 }
 
 # encoding parameters and output file - from command line
-declare rotate= split= unsharp= greyscale= cstretch= quantize= threshold= manual= encoder= target= dpi=600
+declare rotate= split= unsharp= greyscale= cstretch= other= quantize= threshold= manual= encoder= target= dpi=600
 
 # encoding mode and encoder command - from encoding parameters
 declare -a encoder
@@ -48,7 +50,7 @@ declare -a process
 declare -a compressed=()
 
 while [ $# -gt 0 ]; do
-	if getopts ":d:o:r:s:u:gc:q:m:h" OPT; then
+	if getopts ":d:o:r:s:u:gc:q:m:ha:" OPT; then
 		case "$OPT" in
 			r)
 				rotate="$OPTARG"
@@ -74,6 +76,10 @@ while [ $# -gt 0 ]; do
 				cstretch="$OPTARG"
 				threshold=""
 				[ $cstretch ] && echo "Will stretch contrast ($cstretch)"
+				;;
+			a)
+				other="$OPTARG"
+				[ "$other" ] && echo "Will set additional options ($other)"
 				;;
 			q)
 				quantize="$OPTARG"
@@ -127,6 +133,7 @@ while [ $# -gt 0 ]; do
 		[ "$unsharp" ] && process+=("-unsharp" "$unsharp")
 		[ $greyscale ] && process+=("-colorspace" "Gray")
 		[ "$cstretch" ] && process+=("-contrast-stretch" "$cstretch")
+		[ "$other" ] && process+=($other) # yes, without quotes
 		[ "$quantize" ] && process+=("+dither" "-colors" "$quantize") # disable dithering to help cpaldjvu
 		[ "$threshold" ] && process+=("-threshold" "$threshold")
 		continue
