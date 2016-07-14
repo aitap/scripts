@@ -1,8 +1,10 @@
 #!/bin/sh
 
 for file in "$@"; do
-	name="$(basename "$file" .pdf)_book.pdf"
-	test -e "$name" && name="$(mktemp "$name.XXX")" || exit 1
-	pdf2ps "$file" - | psbook | psnup -2 - "$name"
+	name="$(basename "$file" .pdf)_book.ps"
+	if [ -e "$name" ]; then
+		name="$(mktemp "$name.XXX")" || exit 1
+	fi
+	pdf2ps "$file" - | psbook | psnup -2 > "$name"
 done
 
