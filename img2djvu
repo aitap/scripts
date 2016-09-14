@@ -151,7 +151,7 @@ while [ $# -gt 0 ]; do
 		exit 1
 	fi
 
-	convert -verbose "$1" "${process[@]}" "$1.%d.$format"
+	convert "$1" "${process[@]}" "$1.%d.$format"
 	for part in "$1".*.$format; do
 		# $encoder = ${encoder[0]} = program name
 		"${encoder[@]}" "$part" "$part".$encoder
