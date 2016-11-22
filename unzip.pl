@@ -36,7 +36,7 @@ for my $fname (@ARGV) {
 		}
 		TRY: {
 			($_ = $zip->extractMember($member, $target)) == AZ_OK and last TRY;
-			if ($! == 36) { # file name too long
+			if ($!{ENAMETOOLONG}) { # file name too long
 				my ($ext) = $target =~ /(\.[^.]+)$/;
 				substr($target,255-length($ext))=$ext;
 				redo;
