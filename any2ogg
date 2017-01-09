@@ -26,7 +26,7 @@ END
 	exit 0
 fi
 
-for p in shntool oggenc ffmpeg cueprint mac enconv
+for p in shntool oggenc ffmpeg cueprint enconv
 do
 	which $p &>/dev/null || die "$p not found on your system!"
 done
