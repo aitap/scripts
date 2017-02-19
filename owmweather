@@ -1,0 +1,169 @@
+#!/usr/bin/perl
+use 5.020;
+use warnings;
+use Net::Netrc;
+use LWP::Simple 'get';
+use JSON 'decode_json';
+use Scalar::Util 'looks_like_number';
+use charnames ':full';
+use Encode 'decode';
+use Encode::Locale;
+use POSIX 'strftime';
+use List::Util qw(min max sum);
+
+my $api_key = do {
+	Net::Netrc::->lookup("openweathermap") or die 
+		"Please put an API key for machine openweathermap as login in your netrc.\n"
+}->login();
+
+my $city = $ARGV[0] || 524901; # Moscow, RU
+
+sub request {
+	my ($cmd) = @_;
+	return decode_json get
+		"http://api.openweathermap.org/data/2.5/$cmd?"
+		.(looks_like_number $city ? "id" : "q")
+		."=$city&appid=$api_key&units=metric"
+	;
+}
+
+sub hPa {
+	my $mmHg = $_[0] / 1013.25 * 760;
+	return ($mmHg, $mmHg/760);
+}
+
+sub wind {
+	# 8 cardinal directions => sectors of 360/8 degrees
+	# to account for +/-,
+	#  shift by sector/2 = 360/16 = 22.5,
+	#  then scale to 0..7
+	return [qw(N NE E SE S SW W NW)]->[($_[0]+22.5)%360*8/360]
+}
+
+# NOTE: leave a space after all double-width icons
+sub weather_condition {
+	my $wcc = shift;
+	my %icons = (
+		"01" => "\x{1f323}", #"\N{WHITE SUN}",
+		"02" => "\x{1f324}", #"\N{WHITE SUN WITH SMALL CLOUD}",
+		"03" => "\x{1f325}", #"\N{WHITE SUN BEHIND CLOUD}",
+		"04" => "\N{CLOUD}",
+		"09" => "\x{1f327}", #"\N{CLOUD WITH RAIN}",
+		"10" => "\x{1f326}", #"\N{WHITE SUN BEHIND CLOUD WITH RAIN}",
+		"11" => "\x{1f329}", #"\N{CLOUD WITH LIGHTNING}",
+		"13" => "\x{1f328}", #"\N{CLOUD WITH SNOW}",
+		"50" => "\N{FOGGY}",
+	);
+	my ($id) = $wcc->{icon} =~ /(\d+)/;
+	die "Unknown icon code $id" unless exists $icons{$id};
+	return $icons{$id}." $wcc->{description}";
+}
+
+sub sort_uniq_str {
+	my $fun = shift;
+	my %strings;
+	undef @strings{ map $fun->($_), @_ };
+	return sort keys %strings;
+}
+
+binmode(STDOUT, ":encoding(console_out)");
+
+my $current = request("weather");
+say "$current->{name}, ".localtime($current->{dt}).": ", join "; ", (
+	(
+		($current->{main}{temp_min} && $current->{main}{temp_max})
+		? join "..", map $current->{main}{$_}, (qw(temp_min temp temp_max))
+		: $current->{main}{temp}
+	)."\N{DEGREE CELSIUS} ",
+	sprintf ("%.0f mmHg (%.2f atm)", hPa($current->{main}{pressure})),
+	"\N{GREEK SMALL LETTER PHI} = $current->{main}{humidity}%",
+	"$current->{wind}{speed} m/s ".wind($current->{wind}{deg}),
+	$current->{clouds}{all}."%\N{CLOUD} ",
+	(
+		$current->{rain}{"3h"}
+			? qq{$current->{rain}{"3h"}mm \N{UMBRELLA WITH RAIN DROPS} }
+			: ()
+	),
+	(
+		$current->{snow}{"3h"}
+			? qq{$current->{snow}{"3h"}mm \N{SNOWMAN} }
+			: ()
+	),
+	map { weather_condition($_) } (@{$current->{weather}})
+);
+
+my $forecast = request("forecast"); # 5 day forecast
+
+sub format_number { sprintf "%.$_[0]f", ($_[1]//0) }
+
+my @verbose = map {
+	{
+		%$_,
+		show_dt => decode(locale => strftime("%a,%H", localtime $_->{dt})),
+		wind => { deg => wind($_->{wind}{deg}), speed => $_->{wind}{speed} },
+		rain => { "3h" => format_number(3,$_->{rain}{"3h"}) || '' },
+		snow => { "3h" => format_number(3,$_->{snow}{"3h"}) || '' },
+		main => { %{$_->{main}},
+			grnd_level => format_number(2,(hPa($_->{main}{grnd_level}))[0]),
+		},
+	}
+} @{$forecast->{list}}[0..7]; # following day: 8 points spaced by 3 hours
+
+sub minmax {
+	my $dig = shift;
+	return sprintf "%.${dig}f..%.${dig}f", min(@_), max(@_);
+}
+
+my @terse = do { # remaining: run statistics per full day
+	my %terse;
+	push @{$terse{strftime "%Y-%m-%d", localtime $_->{dt}}}, $_
+		for @{$forecast->{list}};
+	delete $terse{$_} for grep { @{$terse{$_}} < 8 } keys %terse;
+	map {
+		{
+			show_dt => $_,
+			main => {
+				temp => minmax(2, map $_->{main}{temp}, @{$terse{$_}}),
+				grnd_level => minmax(2, map { (hPa($_->{main}{grnd_level}))[0] } @{$terse{$_}}),
+				humidity => minmax(0, map $_->{main}{humidity}, @{$terse{$_}}),
+			},
+			wind => {
+				deg => join(" ", sort_uniq_str(\&wind, map $_->{wind}{deg}, @{$terse{$_}})),
+				speed => minmax(2, map $_->{wind}{speed}, @{$terse{$_}}),
+			},
+			clouds => { all =>
+				minmax(0, map $_->{clouds}{all}, @{$terse{$_}})
+			},
+			rain => { "3h" =>
+				format_number(3, sum map { $_->{rain}{"3h"} || 0 } @{$terse{$_}})
+			},
+			snow => { "3h" =>
+				format_number(3, sum map { $_->{snow}{"3h"} || 0 } @{$terse{$_}})
+			},
+		}
+	} sort keys %terse;
+};
+
+sub print_line {
+	my ($row, $access, $verbose, $terse) = @_;
+	say(
+		sprintf("%-6s",$row),
+		(map { sprintf ("%-8s", $access->($_)) } @$verbose),
+		(map { sprintf ("%-16s", $access->($_)) } @$terse)
+	);
+}
+
+my @transform = (
+	'' => sub { $_->{show_dt} },
+	"t,\N{DEGREE CELSIUS} " => sub { $_->{main}{temp} },
+	"P" => sub { $_->{main}{grnd_level} },
+	"\N{GREEK SMALL LETTER PHI},%" => sub { $_->{main}{humidity} },
+	"Wind," => sub { $_->{wind}{deg} },
+	"m/s"   => sub { $_->{wind}{speed} },
+	"\N{CLOUD} ,%" => sub { $_->{clouds}{all} },
+	"\N{UMBRELLA WITH RAIN DROPS} ,mm" => sub { $_->{rain}{"3h"} },
+	"\N{SNOWMAN} ,mm" => sub { $_->{snow}{"3h"} }
+);
+for (0..$#transform/2) {
+	print_line($transform[2*$_], $transform[2*$_+1], \@verbose, \@terse);
+}
