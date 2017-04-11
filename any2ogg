@@ -26,9 +26,9 @@ END
 	exit 0
 fi
 
-for p in shntool oggenc ffmpeg cueprint enconv flac gawk
+for p in shntool oggenc ffmpeg cuetag enconv flac gawk
 do
-	which $p &>/dev/null || die "$p not found on your system!"
+	which $p &>/dev/null || msg "$p not found on your system!"
 done
 
 for file in "$@"
