@@ -116,7 +116,7 @@ sub minmax {
 
 my @terse = do { # remaining: run statistics per full day
 	my %terse;
-	push @{$terse{strftime "%Y-%m-%d", localtime $_->{dt}}}, $_
+	push @{$terse{decode locale => strftime "%Y-%m-%d,%a", localtime $_->{dt}}}, $_
 		for @{$forecast->{list}};
 	delete $terse{$_} for grep { @{$terse{$_}} < 8 } keys %terse;
 	map {
