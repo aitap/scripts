@@ -32,6 +32,8 @@ Available options (in the order of application) are:
 		this option implies cjb2 compression
 	-d <dpi>
 		set dpi for encoders, default 600
+	-e
+		skip non-existent files
 	-h
 		this help message
 USAGE
@@ -39,7 +41,7 @@ USAGE
 }
 
 # encoding parameters and output file - from command line
-declare rotate= split= unsharp= greyscale= cstretch= other= quantize= threshold= manual= encoder= target= dpi=600
+declare rotate= split= unsharp= greyscale= cstretch= other= quantize= threshold= manual= encoder= target= dpi=600 skip=
 
 # encoding mode and encoder command - from encoding parameters
 declare -a encoder
@@ -50,7 +52,7 @@ declare -a process
 declare -a compressed=()
 
 while [ $# -gt 0 ]; do
-	if getopts ":d:o:r:s:u:gc:q:m:ha:" OPT; then
+	if getopts ":d:o:r:s:u:gc:q:m:ha:e" OPT; then
 		case "$OPT" in
 			r)
 				rotate="$OPTARG"
@@ -106,6 +108,10 @@ while [ $# -gt 0 ]; do
 				dpi="$OPTARG"
 				echo "Will set dpi to $dpi"
 				;;
+			e)
+				skip=1
+				echo "Will skip non-existent files"
+				;;
 			*)
 				echo "Invalid option: $OPT $OPTARG"
 				usage 1
@@ -149,6 +155,12 @@ while [ $# -gt 0 ]; do
 	if [ -e "$target" ]; then
 		echo "'$target' already exists! Will not overwrite it, aborting."
 		exit 1
+	fi
+
+	if [ ! -e "$1" -a -n "$skip" ]; then
+		echo "Skipping non-existent $1"
+		shift 1
+		continue
 	fi
 
 	convert "$1" "${process[@]}" "$1.%d.$format"
