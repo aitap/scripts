@@ -99,7 +99,7 @@ sub format_number { sprintf "%.$_[0]f", ($_[1]//0) }
 my @verbose = map {
 	{
 		%$_,
-		show_dt => decode(locale => strftime("%a,%H", localtime $_->{dt})),
+		show_dt => strftime("%a,%H", localtime $_->{dt}),
 		wind => { deg => wind($_->{wind}{deg}), speed => $_->{wind}{speed} },
 		rain => { "3h" => format_number(3,$_->{rain}{"3h"}) || '' },
 		snow => { "3h" => format_number(3,$_->{snow}{"3h"}) || '' },
@@ -116,7 +116,7 @@ sub minmax {
 
 my @terse = do { # remaining: run statistics per full day
 	my %terse;
-	push @{$terse{decode locale => strftime "%Y-%m-%d,%a", localtime $_->{dt}}}, $_
+	push @{$terse{strftime "%Y-%m-%d,%a", localtime $_->{dt}}}, $_
 		for @{$forecast->{list}};
 	delete $terse{$_} for grep { @{$terse{$_}} < 8 } keys %terse;
 	map {
@@ -161,7 +161,7 @@ my @transform = (
 	"Wind," => sub { $_->{wind}{deg} },
 	"m/s"   => sub { $_->{wind}{speed} },
 	"\N{CLOUD} ,%" => sub { $_->{clouds}{all} },
-	"\N{UMBRELLA WITH RAIN DROPS} ,mm" => sub { $_->{rain}{"3h"} },
+	"\N{UMBRELLA WITH RAIN DROPS},mm" => sub { $_->{rain}{"3h"} },
 	"\N{SNOWMAN} ,mm" => sub { $_->{snow}{"3h"} }
 );
 for (0..$#transform/2) {
