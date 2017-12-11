@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+use 5.014;
+use warnings;
+use Time::Piece;
+use Getopt::Long;
+
+my $format = "%Y-%m-%d";
+my $method = "pretty";
+
+die "Usage: $0 [-f format] [-m method] <date1> <date2>\n" unless (
+	GetOptions(
+		"format=s" => \$format,
+		"method=s" => \$method,
+	)
+	and @ARGV == 2
+);
+
+sub mkdate {
+	return Time::Piece::->strptime($_[0], $format);
+}
+
+my $diff = mkdate($ARGV[1]) - mkdate($ARGV[0]);
+
+say $diff->$method;
