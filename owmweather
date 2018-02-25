@@ -16,14 +16,16 @@ my $api_key = do {
 		"Please put an API key for machine openweathermap as login in your netrc.\n"
 }->login();
 
-my $city = $ARGV[0] || 524901; # Moscow, RU
+my $city = @ARGV==0 ? "id=524901" # Moscow, RU
+	: @ARGV==1 ? ( looks_like_number $ARGV[0] ? "id=$ARGV[0]" : "q=$ARGV[0]" )
+	: @ARGV==2 ? "lat=$ARGV[0]&lon=$ARGV[1]"
+	: die "Usage: $0 [<city ID>|<city name>|<latitude> <longitude>]\n";
 
 sub request {
 	my ($cmd) = @_;
 	return decode_json get
 		"http://api.openweathermap.org/data/2.5/$cmd?"
-		.(looks_like_number $city ? "id" : "q")
-		."=$city&appid=$api_key&units=metric"
+		."$city&appid=$api_key&units=metric"
 	;
 }
 
