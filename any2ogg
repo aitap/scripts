@@ -79,6 +79,9 @@ do
 			mkdir -pv "$dir" && cd "$dir" || die "mkdir failed"
 
 			msg "Splitting file"
+			if echo "$file" | grep -qi '\.ape$' && ! command -v mac > /dev/null; then # kludge for debian - there is no monkey's audio package
+				export ST_APE_DEC='ffmpeg -loglevel fatal -i %f -f wav -'
+			fi
 			shnsplit -o 'cust ext=ogg ffmpeg -i - -loglevel fatal -c:a libvorbis -q:a 7 %f' -m '?_/-:_'  -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
 			rm -vf "00. pregap.ogg"
 
