@@ -26,7 +26,7 @@ END
 	exit 0
 fi
 
-for p in shntool oggenc ffmpeg cuetag enconv flac gawk
+for p in shntool ffmpeg cuetag enconv flac gawk
 do
 	which $p &>/dev/null || msg "$p not found on your system!"
 done
@@ -45,7 +45,7 @@ do
 		$0 "$file"/*
 		cd ..
 		continue
-	elif [ -r "$file" ] && echo "$file" | egrep -qi "\.(flac|wv|ape)$"
+	elif [ -r "$file" ] && echo "$file" | egrep -qi "\.(flac|wv|ape|m4a|wav)$"
 	then
 		for guess in "${file}.cue" "$(sed -r 's/\..{2,4}$/.cue/'<<<"$file")" # встроенным variable substitution - не вышло
 		do
@@ -74,12 +74,15 @@ do
 		if [ -n "$cue" ]
 		then
 			file=$(readlink -e "$file")
-			dir=$(awk '($2=="DATE"){Y=$3};($1=="TITLE"){$1="";T=gensub(/^ |["\r]/,"","g")};/TRACK/{printf "%4d - %s",Y,gensub(/[\/:]/,"_","g",T);exit}' "$cue")
+			dir=$(gawk '($2=="DATE"){Y=$3};($1=="TITLE"){$1="";T=gensub(/^ |["\r]/,"","g")};/TRACK/{printf "%4d - %s",Y,gensub(/[\/:]/,"_","g",T);exit}' "$cue")
 			[ -z "$dir" ] && dir="$basename"
 			mkdir -pv "$dir" && cd "$dir" || die "mkdir failed"
 
 			msg "Splitting file"
-			shnsplit -o 'cust ext=ogg oggenc -q7 -Q -o %f -' -m '?_/-:_'  -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
+			if echo "$file" | grep -qi '\.ape$' && ! command -v mac > /dev/null; then # kludge for debian - there is no monkey's audio package
+				export ST_APE_DEC='ffmpeg -loglevel fatal -i %f -f wav -'
+			fi
+			shnsplit -o 'cust ext=ogg ffmpeg -i - -loglevel fatal -c:a libvorbis -q:a 7 %f' -m '?_/-:_'  -t "%n. %t" -f "$cue" "$file" || die "shnsplit failed"
 			rm -vf "00. pregap.ogg"
 
 			msg "Tagging files"
