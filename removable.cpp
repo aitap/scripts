@@ -17,15 +17,28 @@ static void unhide_path(const char * path) {
 	FindClose(find);
 }
 
+static void sanitize_drive(const char * drive) {
+	unhide_path(drive);
+	{
+		std::string autorun(drive), bak(drive);
+		autorun += "autorun.inf";
+		bak += "autorun.bak";
+		MoveFile(autorun.c_str(), bak.c_str());
+	}
+}
+
 int main(int argc, char ** argv) {
-	if (argc <= 1) {
+	if (argc == 1) {
 		std::string buf(26 * 4 + 1, '\0');
 		DWORD n = GetLogicalDriveStringsA(buf.size(), &buf[0]);
 		for (size_t offset = 0; offset < (size_t)n; offset += buf.find('\0', offset) + 1)
 			if (GetDriveType(&buf[offset]) == DRIVE_REMOVABLE)
-				unhide_path(&buf[offset]);
+				sanitize_drive(&buf[offset]);
 	} else {
-		for (int i = 1; i < argc; ++i)
-			unhide_path(argv[i]);
+		for (int i = 1; i < argc; ++i) {
+			std::string path(argv[i]);
+			if (path.back() != '\\') path += '\\';
+			sanitize_drive(path.c_str());
+		}
 	}
 }
