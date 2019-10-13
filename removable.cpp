@@ -18,14 +18,17 @@ static void unhide_path(const char * path) {
 	std::string pattern(path);
 	pattern += pattern.back() == '\\' ? "*" : "\\*";
 
-	find_iterate(pattern.c_str(), [](const WIN32_FIND_DATAA & fd) {
+	find_iterate(pattern.c_str(), [&pattern](const WIN32_FIND_DATAA & fd) {
 		if (std::string(".") == fd.cFileName || std::string("..") == fd.cFileName)
 			return;
 
-		SetFileAttributesA(fd.cFileName, FILE_ATTRIBUTE_NORMAL);
+		std::string path = pattern;
+		path.pop_back();
+		path += fd.cFileName;
+		SetFileAttributesA(path.c_str(), FILE_ATTRIBUTE_NORMAL);
 
 		if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			unhide_path(fd.cFileName);
+			unhide_path(path.c_str());
 	});
 }
 
@@ -38,17 +41,18 @@ static void sanitize_drive(const char * drive) {
 		autorun += "autorun.inf";
 		bak += "autorun.bak";
 
-		MoveFile(autorun.c_str(), bak.c_str());
+		MoveFileEx(autorun.c_str(), bak.c_str(), MOVEFILE_REPLACE_EXISTING);
 	}
 	// also rename all shortcuts for good measure
 	{
 		std::string lnk(drive);
 		lnk += "*.lnk";
 
-		find_iterate(lnk.c_str(), [](const WIN32_FIND_DATAA & fd) {
-			std::string bak(fd.cFileName);
-			bak += ".bak";
-			MoveFile(fd.cFileName, bak.c_str());
+		find_iterate(lnk.c_str(), [drive](const WIN32_FIND_DATAA & fd) {
+			std::string inf(drive);
+			inf += fd.cFileName;
+			std::string bak = inf + ".bak";
+			MoveFile(inf.c_str(), bak.c_str());
 		});
 	}
 }
