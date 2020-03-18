@@ -53,9 +53,8 @@ do
 			then
 				msg "Detected CUE: $guess"
 				cue=$(date +/tmp/%s.cue)
-				cat "$(readlink -e "$guess")" | \
-				enconv > "$cue" && \
-					break || msg "WARNING: failed to recode $guess"
+				enconv < "$guess" > "$cue" || cp "$guess" "$cue"
+				break
 			fi
 		done
 		if [ -z "$cue" ] && ffprobe -show_format "$file" 2>/dev/null | grep -q 'TAG:Cuesheet'
@@ -63,12 +62,8 @@ do
 			msg "Detected embedded CUE"
 			cue=$(date +/tmp/%s.cue)
 			ffprobe -show_format "$file" | \
-			sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' | \
-			enconv > "$cue" || {
-				msg "Failed to recode embedded CUE"
-				rm -vf "$cue"
-				unset cue
-			}
+			sed -n 'H;${g;s/.*TAG:Cuesheet=//;s/\nTAG:.*//;p}' > "$cue"
+			enconv "$cue"
 		fi
 	
 		if [ -n "$cue" ]
