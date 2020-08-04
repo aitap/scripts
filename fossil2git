@@ -1,0 +1,33 @@
+#!/bin/sh -e
+
+if [ $# -ne 2 ]; then
+	echo "Usage: $0 path/to/fossil/checkout path/to/git/checkout"
+	exit 1
+fi
+
+repo=`( cd "$1" && fossil info ) | sed -n '/^repository: */s/^repository: *//p'`
+fmarks="$2/.fossil.marks"
+gmarks="$2/.git.marks"
+
+if [ -d "$2/.git" ]; then # target repo already exists
+	set -x
+	fossil export --git \
+		--import-marks "$fmarks" \
+		--export-marks "$fmarks" \
+		"$repo" \
+	| git --git-dir="$2/.git" fast-import \
+		--import-marks="$gmarks" --export-marks="$gmarks"
+
+	git --git-dir="$2/.git" fast-export --all \
+		--import-marks="$gmarks" --export-marks="$gmarks" \
+	| fossil import --git --incremental \
+		--import-marks "$fmarks" --export-marks "$fmarks" \
+		"$repo"
+else # need to create Git repo first
+	set -x
+	mkdir -p "$2"
+	git init "$2"
+	fossil export --git --export-marks "$fmarks" "$repo" \
+		| git --git-dir="$2/.git" fast-import --export-marks="$gmarks"
+fi
+
