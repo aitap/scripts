@@ -30,6 +30,8 @@ Available options (in the order of application) are:
 	-m <threshold>
 		make pages monochrome
 		this option implies cjb2 compression
+	-p
+		switch to DjVuPhoto encoding (not cjb2 or cpaldjvu)
 	-d <dpi>
 		set dpi for encoders, default 600
 	-e
@@ -52,7 +54,7 @@ declare -a process
 declare -a compressed=()
 
 while [ $# -gt 0 ]; do
-	if getopts ":d:o:r:s:u:gc:q:m:ha:e" OPT; then
+	if getopts ":d:o:r:s:u:gc:q:m:ha:ep" OPT; then
 		case "$OPT" in
 			r)
 				rotate="$OPTARG"
@@ -93,6 +95,11 @@ while [ $# -gt 0 ]; do
 				quantize=""
 				[ "$threshold" ] && echo "Will convert to monochrome with threshold $threshold"
 				;;
+			p)
+				threshold=""
+				quantize=""
+				echo "Will encode as DjVuPhoto"
+				;;
 			h)
 				usage 0
 				;;
@@ -119,7 +126,7 @@ while [ $# -gt 0 ]; do
 		esac
 		shift $(($OPTIND-1)) # get $@ ready for next iteration
 		OPTIND=1 # get getopts ready, too
-	
+
 		# now we need to update the encoding mode
 		if [ "$threshold" ]; then
 			encoder=("cjb2" "-verbose" "-dpi" "$dpi")
