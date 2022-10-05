@@ -31,6 +31,8 @@ do
 	which $p &>/dev/null || msg "$p not found on your system!"
 done
 
+self="$(realpath "$0")"
+
 for file in "$@"
 do
 	msg "Doing: $file"
@@ -42,7 +44,7 @@ do
 		file=$(readlink -e "$file")
 		mkdir -p "$basename" || die "mkdir failed"
 		cd "$basename"
-		$0 "$file"/*
+		"$self" "$file"/*
 		cd ..
 		continue
 	elif [ -r "$file" ] && echo "$file" | egrep -qi "\.(flac|wv|ape|m4a|wav)$"
