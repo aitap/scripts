@@ -1,0 +1,49 @@
+#!/bin/sh -e
+# first of all, compile the file
+${REALCC-cc} "$@" || exit $?
+
+# if the compilation succeeded, build the cppcheck command line and try to invoke it
+mode=clear
+append=
+src=
+out=
+for arg in "$@"; do
+	if [ "$mode" = clear ]; then set --; mode=; fi
+	case "$mode" in
+	('')
+		case "$arg" in
+		-[DUI]?*) # append whole argument
+			set -- "$@" "$arg"
+			;;
+		-[DUI]) # append the following argument too
+			mode=append
+			append="$arg"
+			;;
+		*.c|*.cpp) # looks like we're given a source file
+			if [ -z "$seen_source" ]; then
+				src="$arg"
+				set -- "$@" "$arg"
+			else
+				# don't run the check if seeing more than one file
+				exit 0
+			fi
+			;;
+		-o) # remember the output file to place the check file nearby
+			mode=out
+			;;
+		esac
+		;;
+	append)
+		set -- "$@" "$append" "$arg"
+		mode=
+		;;
+	out)
+		out="$arg"
+		mode=
+		;;
+	esac
+done
+
+if [ -n "$src" -a -n "$out" ]; then
+	exec cppcheck -q --xml ${CPPCHECK_OPTIONS---enable=warning} "$@" 2>"$out".cppcheck.xml
+fi
