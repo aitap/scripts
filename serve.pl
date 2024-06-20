@@ -8,7 +8,7 @@ use Path::Tiny qw(cwd path);
 use version;
 
 # By default, serve from the current directory.
-@{app->static->paths} = (cwd);
+app->static->paths([cwd->stringify]);
 
 # Allow the user to set the static file path on the command line.
 getopt \@ARGV, ['pass_through'], 'public=s' => \app->static->paths->[0];
