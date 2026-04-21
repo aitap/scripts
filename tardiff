@@ -1,0 +1,28 @@
+#!/bin/sh -e
+
+if [ $# -lt 2 ]; then
+	echo "Usage: $0 <tarfile> <tarfile> [diff options, default -ru]"
+	exit 1
+fi
+
+if [ $# -lt 3 ]; then
+	set -- "$1" "$2" -ru
+fi
+
+WORKDIR=$(mktemp -d tardiff.XXXXXXXX)
+cleanup () {
+	rm -rf "$WORKDIR"
+}
+trap cleanup EXIT INT QUIT
+
+PATH1="$1"
+PATH2="$2"
+FILE1="$(basename "$PATH1")"
+FILE2="$(basename "$PATH2")"
+shift 2
+
+mkdir "$WORKDIR/$FILE1" "$WORKDIR/$FILE2"
+tar -C "$WORKDIR/$FILE1" -xf "$PATH1"
+tar -C "$WORKDIR/$FILE2" -xf "$PATH2"
+cd "$WORKDIR"
+diff "$@" "$FILE1" "$FILE2"
