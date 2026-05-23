@@ -9,7 +9,7 @@ if [ $# -lt 3 ]; then
 	set -- "$1" "$2" -ru
 fi
 
-WORKDIR=$(mktemp -d tardiff.XXXXXXXX)
+WORKDIR=$(mktemp --tmpdir -d tardiff.XXXXXXXX)
 cleanup () {
 	rm -rf "$WORKDIR"
 }
