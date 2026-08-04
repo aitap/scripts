@@ -1,0 +1,2 @@
+#!/bin/sh
+exec chrt -i 0 nice -n 15 ionice -c 3 "$@"
